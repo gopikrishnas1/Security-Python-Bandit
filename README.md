@@ -1,8 +1,4 @@
 # Secure Shop (E-Commerce Platform Security Analysis and Design)
-Student: Gopikrishna Santharuban
-
-
-
 
 ------------------------------------------------------------
 1. QUICKSTART (VS CODE FRIENDLY)
