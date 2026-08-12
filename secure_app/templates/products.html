@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}All Products — SecureApp{% endblock %}
+
+{% block content %}
+
+  <!-- Page header -->
+  <header class="products-header" style="margin-top:4px; display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+    <div>
+      <h1>All Products</h1>
+      <div class="muted" style="font-size:.95rem">
+        Browse everything in the catalogue. Ratings are averaged from customer reviews.
+        {% if total is defined %} • <strong>{{ total }}</strong> total{% endif %}
+      </div>
+    </div>
+
+    {% if current_user.is_authenticated and current_user.role in ('admin','seller') %}
+      <div class="form-actions" style="align-self:center;">
+        <a class="btn btn-primary"
+           href="{% if current_user.role == 'admin' %}{{ url_for('admin_add_product') }}{% else %}{{ url_for('seller_add_product') }}{% endif %}">
+          Add Product
+        </a>
+      </div>
+    {% endif %}
+  </header>
+
+  <!-- Sticky, simple filters -->
+  <div class="filter-bar">
+    <form class="filters-inline" method="get" action="{{ url_for('all_products') }}" role="search" aria-label="Filter products">
+      <input type="search" name="q" placeholder="Search…" value="{{ request.args.get('q','') }}">
+      <select name="status" aria-label="Stock">
+        {% set s = request.args.get('status','') %}
+        <option value=""    {% if s=='' %}selected{% endif %}>All</option>
+        <option value="in"  {% if s=='in' %}selected{% endif %}>In stock</option>
+        <option value="low" {% if s=='low' %}selected{% endif %}>Low (≤10)</option>
+        <option value="out" {% if s=='out' %}selected{% endif %}>Out</option>
+      </select>
+      <button class="btn btn-outline btn-filter" type="submit">Filter</button>
+      <a class="btn" href="{{ url_for('all_products') }}">Reset</a>
+    </form>
+  </div>
+
+  <!-- Catalogue -->
+  <section class="catalog-scroll" aria-label="Product catalogue">
+    {% if products and products|length > 0 %}
+      <div class="catalog-grid">
+
+        {% for p in products %}
+          <article class="cell" aria-labelledby="p-{{ p.id }}-title">
+            <a href="{{ url_for('product_detail', product_id=p.id) }}" class="thumb" aria-hidden="true" tabindex="-1">
+              {% if p.image %}
+                <img src="{{ url_for('static', filename='uploads/' ~ p.image) }}" alt="{{ p.name }}">
+              {% else %}
+                <img src="{{ url_for('static', filename='icons/security.png') }}" alt="{{ p.name }}">
+              {% endif %}
+            </a>
+
+            <div class="body">
+              <a id="p-{{ p.id }}-title" class="title line-clamp-1" href="{{ url_for('product_detail', product_id=p.id) }}">
+                {{ p.name }}
+              </a>
+              {% if p.description %}
+                <p class="desc line-clamp-2">{{ p.description }}</p>
+              {% endif %}
+
+              <div class="row">
+                <span class="price">£{{ '%.2f' % p.price }}</span>
+                {% if p.stock > 10 %}
+                  <span class="stock">In stock</span>
+                {% elif p.stock > 0 %}
+                  <span class="stock low">Low ({{ p.stock }})</span>
+                {% else %}
+                  <span class="stock out">Out</span>
+                {% endif %}
+              </div>
+
+              <div class="rating-line">
+                {% set avg = (p.avg_rating or 0)|float %}
+                <span class="rating" style="--rating: {{ avg }};" aria-label="Rated {{ '%.1f' % avg }} out of 5"></span>
+                {% if p.review_count %}<span>({{ p.review_count }})</span>{% endif %}
+              </div>
+
+              <div class="actions">
+                <a class="btn btn-outline" href="{{ url_for('product_detail', product_id=p.id) }}">Details</a>
+
+                {% if p.stock > 0 %}
+                  {% if current_user.is_authenticated %}
+                    <form method="post" action="{{ url_for('cart_add', product_id=p.id) }}" class="inline-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-primary" type="submit">Add</button>
+                    </form>
+                  {% else %}
+                    <a class="btn btn-primary" href="{{ url_for('login') }}">Add</a>
+                  {% endif %}
+                {% else %}
+                  <button class="btn" disabled>Sold out</button>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+
+      </div>
+
+      <!-- Pagination -->
+      {% if page is defined and pages is defined and pages > 1 %}
+        <div class="catalog-pager" aria-label="Pagination">
+          {% set q = request.args.get('q','') %}
+          {% set status = request.args.get('status','') %}
+
+          {% if page > 1 %}
+            <a class="btn" href="{{ url_for('all_products', page=page-1, q=q, status=status) }}">← Prev</a>
+          {% else %}
+            <button class="btn" disabled>← Prev</button>
+          {% endif %}
+
+          <span class="muted">Page {{ page }} of {{ pages }}</span>
+
+          {% if page < pages %}
+            <a class="btn" href="{{ url_for('all_products', page=page+1, q=q, status=status) }}">Next →</a>
+          {% else %}
+            <button class="btn" disabled>Next →</button>
+          {% endif %}
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="empty">
+        <p>No products found. Try clearing filters.</p>
+        <div class="form-actions" style="justify-content:center; gap:10px;">
+          <a class="btn" href="{{ url_for('all_products') }}">Reset filters</a>
+          <a class="btn btn-outline" href="{{ url_for('home') }}">Go home</a>
+          {% if current_user.is_authenticated and current_user.role in ('admin','seller') %}
+            <a class="btn btn-primary"
+               href="{% if current_user.role == 'admin' %}{{ url_for('admin_add_product') }}{% else %}{{ url_for('seller_add_product') }}{% endif %}">
+              Add Product
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Seller — Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="seller-dashboard">
+
+  <header class="products-header">
+    <div>
+      <h1>Seller Dashboard</h1>
+      <p class="muted" style="font-size:.95rem">
+        Create and manage your listings. All actions are audited.
+        {% if products is defined %} • <strong>{{ products|length }}</strong> total{% endif %}
+      </p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('profile') }}">← Back to Profile</a>
+      <a class="btn" href="{{ url_for('seller_orders') }}">View Orders</a>
+      <a class="btn btn-primary" href="{{ url_for('seller_add_product') }}">Add Product</a>
+    </div>
+  </header>
+
+  <section class="card" style="margin-top:12px; padding: 0;"> {% if products and products|length %}
+      <div class="table-scroll">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th style="width:72px">Image</th>
+              <th>Name</th>
+              <th style="width:110px">Price</th>
+              <th style="width:110px">Stock</th>
+              <th style="width:180px">Created</th>
+              <th style="width:210px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+            <tr>
+              <td>
+                {% if p.image %}
+                  <img src="{{ url_for('static', filename='uploads/' ~ p.image) }}"
+                       alt=""
+                       style="width:56px;height:56px;object-fit:cover;border-radius:10px">
+                {% else %}
+                  <div class="muted" style="width:56px;height:56px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px">
+                    —
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <a class="link" href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.name }}</a>
+                {% if p.description %}
+                  <div class="muted" style="font-size:.9rem">{{ p.description[:90] }}{% if p.description|length > 90 %}…{% endif %}</div>
+                {% endif %}
+              </td>
+              <td class="mono">£{{ '%.2f' % p.price }}</td>
+              <td>
+                {% if p.stock > 10 %}
+                  <span class="audit-badge">In stock ({{ p.stock }})</span>
+                {% elif p.stock > 0 %}
+                  <span class="audit-badge audit-badge-low">Low ({{ p.stock }})</span>
+                {% else %}
+                  <span class="audit-badge audit-badge-out">Out</span>
+                {% endif %}
+              </td>
+              <td class="mono">{{ p.created_at }}</td>
+              <td>
+                <div class="form-actions" style="justify-content:flex-end;gap:8px;margin-top:0;">
+                  <a class="btn btn-outline btn-xs" href="{{ url_for('seller_edit_product', product_id=p.id) }}">Edit</a>
+                  <form method="post"
+                        action="{{ url_for('seller_delete_product', product_id=p.id) }}"
+                        class="inline-form"
+                        onsubmit="return confirm('Delete this product?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-xs" type="submit">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"> <p class="muted">You haven't added any products yet.</p>
+        <a class="btn btn-primary" href="{{ url_for('seller_add_product') }}" style="margin-top: 1rem;">Add your first product</a>
+      </div>
+    {% endif %}
+  </section>
+
+</div> {% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% set page_title =
+  "Sign in" if mode == "login"
+  else ("Create account" if mode == "register"
+  else ("Two-Factor Authentication" if mode == "twofactor"
+  else "Account")) %}
+{% block title %}{{ page_title }} — SecureApp{% endblock %}
+
+{% block content %}
+
+{% if mode == "login" %}
+  <h1 class="text-2xl font-bold mb-4">Sign in</h1>
+  <p class="text-gray-600 mb-4">Welcome back. Use your username or email.</p>
+
+  <form id="login-form" method="post" action="{{ url_for('login') }}" class="card" style="max-width:520px;padding:16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if request.args.get('next') %}
+      <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+    {% endif %}
+
+    <div class="mb-3">
+      <label for="login-ident">Username or Email</label>
+      <input id="login-ident"
+             name="username"
+             type="text"
+             required
+             autocomplete="username"
+             value="{{ request.form.get('username','') }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="login-pass">Password</label>
+      <div class="input-with-btn">
+        <input id="login-pass"
+               name="password"
+               type="password"
+               required
+               minlength="10"
+               autocomplete="current-password">
+        <button class="btn btn-outline btn-sm" type="button" data-toggle="login-pass">Show</button>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Minimum 10 characters (matches server policy).</p>
+    </div>
+
+    <div class="form-actions">
+      <button id="login-submit" class="btn btn-primary" type="submit">Sign in</button>
+      <a class="btn btn-outline" href="{{ url_for('register') }}">Create account</a>
+    </div>
+  </form>
+
+{% elif mode == "register" %}
+  <h1 class="text-2xl font-bold mb-4">Create account</h1>
+  <p class="text-gray-600 mb-4">It's quick and secure. You can enable 2FA after sign-in.</p>
+
+  <form id="reg-form" method="post" action="{{ url_for('register') }}" class="card" style="max-width:620px;padding:16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="mb-3">
+      <label for="reg-username">Username</label>
+      <input id="reg-username"
+             name="username"
+             type="text"
+             required
+             minlength="3"
+             maxlength="40"
+             autocomplete="username"
+             value="{{ request.form.get('username','') }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="reg-email">Email</label>
+      <input id="reg-email"
+             name="email"
+             type="email"
+             required
+             maxlength="120"
+             autocomplete="email"
+             value="{{ request.form.get('email','') }}">
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+      <div>
+        <label for="reg-pass">Password</label>
+        <div class="input-with-btn">
+          <input id="reg-pass"
+                 name="password"
+                 type="password"
+                 required
+                 minlength="10"
+                 autocomplete="new-password"
+                 aria-describedby="pw-help">
+          <button class="btn btn-outline btn-sm" type="button" data-toggle="reg-pass">Show</button>
+        </div>
+      </div>
+      <div>
+        <label for="reg-confirm">Confirm Password</label>
+        <div class="input-with-btn">
+          <input id="reg-confirm"
+                 name="confirm"
+                 type="password"
+                 required
+                 minlength="10"
+                 autocomplete="new-password">
+          <button class="btn btn-outline btn-sm" type="button" data-toggle="reg-confirm">Show</button>
+        </div>
+      </div>
+    </div>
+    <p id="pw-help" class="text-xs text-gray-500 mt-1">Minimum 10 characters. Avoid common passwords.</p>
+    <p id="pw-match" class="text-xs mt-1" style="color: var(--danger,#b91c1c); display:none;">Passwords don’t match.</p>
+
+    <div class="form-actions" style="margin-top:12px;">
+      <button id="reg-submit" class="btn btn-primary" type="submit">Create account</button>
+      <a class="btn btn-outline" href="{{ url_for('login') }}">Back to sign in</a>
+    </div>
+  </form>
+
+{% elif mode == "twofactor" %}
+  <h1 class="text-2xl font-bold mb-4">Two-Factor Authentication</h1>
+  <p class="text-gray-600 mb-4">Enter the 6-digit code from your authenticator app to finish signing in.</p>
+
+  <form id="otp-form" method="post" action="{{ url_for('twofactor') }}" class="card" style="max-width:420px;padding:16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="mb-3">
+      <label for="otp">One-Time Code</label>
+      <input id="otp"
+             name="otp"
+             type="text"
+             inputmode="numeric"
+             pattern="\\d{6}"
+             minlength="6"
+             maxlength="6"
+             required
+             placeholder="123456"
+             aria-describedby="otp-help"
+             autocomplete="one-time-code">
+      <p id="otp-help" class="text-xs text-gray-500 mt-1">Codes RESETS Every 30 Sec.</p>
+    </div>
+
+    <div class="form-actions">
+      <button id="otp-submit" class="btn btn-primary" type="submit">Verify</button>
+      <a class="btn btn-outline" href="{{ url_for('login') }}">Use a different account</a>
+    </div>
+  </form>
+
+{% else %}
+  <!-- Fallback if mode not provided -->
+  <div class="card" style="padding:16px;max-width:520px;">
+    <p class="text-gray-600">Choose an action:</p>
+    <div class="form-actions">
+      <a class="btn btn-primary" href="{{ url_for('login') }}">Sign in</a>
+      <a class="btn btn-outline" href="{{ url_for('register') }}">Create account</a>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

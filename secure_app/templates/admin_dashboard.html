@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Admin — Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page head -->
+<header class="page-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+  <div>
+    <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+    <p class="muted" style="margin-top:4px">
+      Manage the platform and peek at security & usage. Full detail is on <a href="{{ url_for('admin_audit') }}">Analytics</a>.
+    </p>
+  </div>
+  <div class="form-actions" style="gap:8px">
+    <a class="btn" href="{{ url_for('admin_audit') }}">Open Analytics</a>
+    <a class="btn btn-primary" href="{{ url_for('admin_audit_export') }}">Export Audit CSV</a>
+  </div>
+</header>
+
+{# Defensive: counts may be missing some keys #}
+{% set c = counts or {} %}
+
+<!-- KPI cards -->
+<section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:12px">
+  <article class="card rounded-2xl border p-6">
+    <div class="text-sm muted">Users</div>
+    <div class="text-3xl font-bold">{{ c.get('users', 0) }}</div>
+    <p class="text-xs muted mt-2">Registered accounts.</p>
+  </article>
+
+  <article class="card rounded-2xl border p-6">
+    <div class="text-sm muted">Products</div>
+    <div class="text-3xl font-bold">{{ c.get('products', 0) }}</div>
+    <p class="text-xs muted mt-2">Catalogue items.</p>
+  </article>
+
+  <article class="card rounded-2xl border p-6">
+    <div class="text-sm muted">Orders</div>
+    <div class="text-3xl font-bold">{{ c.get('orders', 0) }}</div>
+    <p class="text-xs muted mt-2">Completed transactions.</p>
+  </article>
+
+  <article class="card rounded-2xl border p-6">
+    <div class="text-sm muted">Suspicious</div>
+    <div class="text-3xl font-bold">{{ c.get('suspicious', 0) }}</div>
+    <p class="text-xs muted mt-2">Signals recorded.</p>
+  </article>
+</section>
+
+{# ---- NEW TOTALS STRIP (HORIZONTAL BAR) ---- #}
+{% set t = activity_totals or {} %}
+<section class="card rounded-2xl border" style="padding:10px 12px;margin-bottom:16px">
+  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Page views</span><strong>{{ t.get('page_views', 0) }}</strong>
+    </div>
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Product views</span><strong>{{ t.get('product_views', 0) }}</strong>
+    </div>
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Basket adds</span><strong>{{ t.get('basket_adds', 0) }}</strong>
+    </div>
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Reviews</span><strong>{{ t.get('reviews', 0) }}</strong>
+    </div>
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Orders</span><strong>{{ t.get('orders', 0) }}</strong>
+    </div>
+    <div style="display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff">
+      <span class="muted text-sm">Revenue (£)</span><strong>{{ '%.2f'|format(t.get('revenue', 0) or 0) }}</strong>
+    </div>
+  </div>
+</section>
+
+<!-- Quick actions -->
+<section class="card rounded-2xl border p-6" style="margin-bottom:16px">
+  <h2 class="font-semibold mb-3">Quick actions</h2>
+  <div class="form-actions">
+    <a class="btn" href="{{ url_for('admin_users') }}">Manage users</a>
+    <a class="btn" href="{{ url_for('admin_products') }}">Manage products</a>
+    <a class="btn btn-outline" href="{{ url_for('profile') }}">My profile</a>
+    <a class="btn btn-outline" href="{{ url_for('home') }}">Home</a>
+  </div>
+  <p class="text-xs muted" style="margin-top:.5rem">
+    Note: admins cannot delete their own account.
+  </p>
+</section>
+
+<!-- Two-column analytics preview -->
+<section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
+  <!-- Suspicious activity preview -->
+  <article class="card rounded-2xl border p-6">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2 class="font-semibold">Suspicious activity (last 24h)</h2>
+      <a class="btn btn-outline" href="{{ url_for('admin_audit') }}">See details</a>
+    </div>
+
+    {% if suspicious_preview %}
+      <ul class="text-sm" style="margin-top:10px;list-style:none;padding:0">
+        {% for row in suspicious_preview %}
+          <li style="display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px">
+            <span><strong>{{ row.category }}</strong></span>
+            <span class="muted">{{ row.count }} events</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted" style="margin-top:8px">Quiet in the last day. Use Analytics for the IP breakdown.</p>
+    {% endif %}
+  </article>
+
+  <!-- Page views summary -->
+  <article class="card rounded-2xl border p-6">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2 class="font-semibold">Page views (last 7 days)</h2>
+      <a class="btn btn-outline" href="{{ url_for('admin_audit') }}">Open table</a>
+    </div>
+
+    {% if pageviews and pageviews|length > 0 %}
+      <div style="margin-top:10px;overflow:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Page views</th>
+              <th>Product views</th>
+              <th>Basket adds</th>
+              <th>Reviews</th>
+              <th>Orders</th>
+              <th>Revenue (£)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in pageviews %}
+            <tr>
+              <td>{{ r.user }}</td>
+              <td>{{ r.page_views }}</td>
+              <td>{{ r.product_views }}</td>
+              <td>{{ r.basket_adds }}</td>
+              <td>{{ r.reviews }}</td>
+              <td>{{ r.orders }}</td>
+              <td>{{ "%.2f"|format(r.revenue or 0) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:8px">No summary here yet. Check Analytics for the full report.</p>
+    {% endif %}
+  </article>
+</section>
+
+<!-- Recent activity preview -->
+<section class="card rounded-2xl border p-6">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <h2 class="font-semibold">Recent activity</h2>
+    <a class="btn btn-outline" href="{{ url_for('admin_audit') }}">View all</a>
+  </div>
+
+  {% if recent_events and recent_events|length > 0 %}
+    <div style="margin-top:10px;overflow:auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>When (UTC)</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Route</th>
+            <th>Meta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in recent_events %}
+          <tr>
+            <td>{{ e.ts }}</td>
+            <td>{{ e.user or "-" }}</td>
+            <td>{{ e.event_type }}</td>
+            <td class="muted">{{ e.route }}</td>
+            <td class="muted">{{ e.meta }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted" style="margin-top:8px">No recent events captured here. The live stream is on the Analytics page.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

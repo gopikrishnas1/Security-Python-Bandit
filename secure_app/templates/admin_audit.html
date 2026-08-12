@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block title %}Admin • Audit Log{% endblock %}
+
+{% block content %}
+
+<section class="products-header">
+  <div>
+    <h1>Audit Log</h1>
+    <div class="count">
+      Inspect security-relevant events mirrored in <code>audit_events</code>.
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+    <a class="btn btn-primary" href="{{ url_for('admin_audit_export') }}">Export CSV</a>
+  </div>
+</section>
+
+<!-- Security signals (unchanged)-->
+<section class="card" style="margin-top:12px">
+  <h2 style="margin:0 0 10px">Security signals</h2>
+
+  <div class="grid-4" style="gap:12px">
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">Failed logins (last 24 hours)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Failures</th></tr></thead>
+          <tbody>
+            {% for r in (failed24 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or r.get('addr') or '-' }}</td>
+                <td class="mono">{{ r.get('count') or r.get('failures') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">Registrations by IP (last 7 days)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Registrations</th></tr></thead>
+          <tbody>
+            {% for r in (regs7 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or '-' }}</td>
+                <td class="mono">{{ r.get('count') or r.get('regs') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">Accounts sharing IP (last 24 hours)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Accounts</th></tr></thead>
+          <tbody>
+            {% for r in (shared_ip24 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or '-' }}</td>
+                <td class="mono">{{ r.get('users') or r.get('accounts') or r.get('count') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">Accounts sharing IP (last 7 days)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Accounts</th></tr></thead>
+          <tbody>
+            {% for r in (shared_ip7 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or '-' }}</td>
+                <td class="mono">{{ r.get('users') or r.get('accounts') or r.get('count') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-4" style="gap:12px; margin-top:12px; grid-template-columns: repeat(3, minmax(0,1fr));">
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">CSRF failures by IP (last 24 hours)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Failures</th></tr></thead>
+          <tbody>
+            {% for r in (csrf24 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or '-' }}</td>
+                <td class="mono">{{ r.get('count') or r.get('fails') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">CSRF failures by IP (last 7 days)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>IP</th><th>Failures</th></tr></thead>
+          <tbody>
+            {% for r in (csrf7 or []) %}
+              <tr>
+                <td class="mono">{{ r.get('ip') or '-' }}</td>
+                <td class="mono">{{ r.get('count') or r.get('fails') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <h3 style="margin:0 0 6px">Forbidden (403) by users (last 7 days)</h3>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>User</th><th>403s</th></tr></thead>
+          <tbody>
+            {% for r in (forb7 or []) %}
+              <tr>
+                <td class="mono">
+                  {{ r.get('user') or r.get('email') or ('#' ~ (r.get('user_id') or '')) }}
+                </td>
+                <td class="mono">{{ r.get('count') or r.get('events') or 0 }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Simplified Filters + "Only suspicious" -->
+<section class="card" style="margin-top:12px">
+  <form method="get" class="stack" style="gap:12px">
+    <div class="grid-4" style="gap:12px">
+      <div>
+        <label class="muted" for="q">Search</label>
+        <input id="q" name="q" value="{{ request.args.get('q','') }}" placeholder="route:/admin OR meta:bruteforce OR method:POST">
+      </div>
+      <div>
+        <label class="muted" for="event_type">Event Type</label>
+        <input id="event_type" name="event_type" value="{{ request.args.get('event_type','') }}" placeholder="login_failure, page_view, purchase...">
+      </div>
+      <div>
+        <label class="muted" for="method">HTTP Method</label>
+        <input id="method" name="method" value="{{ request.args.get('method','') }}" placeholder="GET / POST / ...">
+      </div>
+      <div>
+        <label class="muted" for="user_id">User ID</label>
+        <input id="user_id" name="user_id" value="{{ request.args.get('user_id','') }}" placeholder="e.g. 1">
+      </div>
+    </div>
+
+    <div class="grid-4" style="gap:12px">
+      <div>
+        <label class="muted" for="session_id">Session ID</label>
+        <input id="session_id" name="session_id" value="{{ request.args.get('session_id','') }}" placeholder="starts-with, substring OK">
+      </div>
+      <div>
+        <label class="muted" for="product_id">Product ID</label>
+        <input id="product_id" name="product_id" value="{{ request.args.get('product_id','') }}" placeholder="e.g. 42">
+      </div>
+      <div>
+        <label class="muted" for="date_from">From (UTC)</label>
+        <input id="date_from" type="date" name="date_from" value="{{ request.args.get('date_from','') }}">
+      </div>
+      <div>
+        <label class="muted" for="date_to">To (UTC)</label>
+        <input id="date_to" type="date" name="date_to" value="{{ request.args.get('date_to','') }}">
+      </div>
+    </div>
+
+    <div class="form-actions" style="justify-content:flex-start; gap:8px">
+      <div>
+        <label class="muted" for="limit">Rows</label>
+        <select id="limit" name="limit">
+          {% set cur_limit = (request.args.get('limit') or '200')|int %}
+          {% for opt in [50,100,200,500] %}
+            <option value="{{ opt }}" {% if cur_limit==opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <label class="muted" style="display:flex; align-items:center; gap:8px; user-select:none;">
+        <input type="checkbox" id="only_suspicious" name="only_suspicious" value="1"
+               {% if request.args.get('only_suspicious') %}checked{% endif %}>
+        Only suspicious
+      </label>
+
+      <button class="btn btn-primary" type="submit" style="align-self:end">Apply Filters</button>
+      <a class="btn btn-outline" href="{{ url_for('admin_audit') }}" style="align-self:end">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:12px">
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="min-width:145px;">Timestamp (UTC)</th>
+          <th>Event</th>
+          <th>User</th>
+          <th>Route</th>
+          <th>Method</th>
+          <th>Product</th>
+          <th title="Latency (ms)">ms</th>
+          <th>IP</th>
+          <th>UA</th>
+          <th>Session</th>
+          <th>Meta</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% if events and events|length %}
+        {% set only_sus = request.args.get('only_suspicious') %}
+        {% for r in events %}
+          {% set sus = r['event_type'] in ['login_failure','login_failure_2fa','csrf_failure','account_lockout','rate_limited','forbidden'] %}
+          {% if not only_sus or sus %}
+          <tr class="{% if sus %}suspicious{% endif %}">
+            <td class="mono">{{ r['ts'] }}</td>
+            <td>
+              <span class="badge">{{ r['event_type'] }}</span>
+              {% if sus %}<span class="audit-badge suspicious">Suspicious</span>{% endif %}
+            </td>
+            <td class="mono">{% if r['user_id'] %}#{{ r['user_id'] }}{% else %}<span class="muted">anon</span>{% endif %}</td>
+            <td class="mono" title="{{ r['route'] }}">{{ r['route'] }}</td>
+            <td class="mono">{{ r['method'] }}</td>
+            <td class="mono">{% if r['product_id'] %}#{{ r['product_id'] }}{% else %}-{% endif %}</td>
+            <td class="mono">{{ r['ms'] or 0 }}</td>
+            <td class="mono">{{ r['ip'] or '-' }}</td>
+            <td class="truncate" title="{{ r['ua'] or '' }}">{{ r['ua'] or '-' }}</td>
+            <td class="mono truncate" title="{{ r['session_id'] or '' }}">{{ r['session_id'] or '-' }}</td>
+            <td class="truncate">
+              {% set meta_txt = r['meta'] or '' %}
+              {% if meta_txt %}
+                <details>
+                  <summary class="link">view</summary>
+                  <pre class="code-block meta">{{ meta_txt }}</pre>
+                </details>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td class="mono">
+              {% if r['session_id'] %}
+                <button class="btn btn-xs copy-btn" data-copy="{{ r['session_id']|e }}">Copy SID</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="12" class="muted" style="text-align:center">No audit events match your filters.</td>
+        </tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% set page = page or 1 %}
+  {% set limit = limit or 200 %}
+  <div class="form-actions" style="justify-content:space-between; margin-top:12px">
+    <div class="muted">Showing up to {{ limit }} rows • Page {{ page }}</div>
+    <div class="actions" style="gap:8px">
+      {% if prev_url %}
+        <a class="btn" href="{{ prev_url }}">← Prev</a>
+      {% else %}
+        <button class="btn" disabled>← Prev</button>
+      {% endif %}
+      {% if next_url %}
+        <a class="btn btn-primary" href="{{ next_url }}">Next →</a>
+      {% else %}
+        <button class="btn btn-primary" disabled>Next →</button>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

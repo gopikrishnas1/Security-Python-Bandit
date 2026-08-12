@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Account{% endblock %}
+
+{% block content %}
+
+{% set role = (current_user.role or "customer") %}
+{% set is_admin  = current_user.is_authenticated and role == "admin" %}
+{% set is_seller = current_user.is_authenticated and role == "seller" %}
+
+<header class="mb-3">
+  <h1 class="text-2xl font-bold">Account</h1>
+  <p class="muted">Signed in as <strong>{{ current_user.username or current_user.email }}</strong> • Role: {{ role }}</p>
+</header>
+
+<section class="grid" style="gap:14px; grid-template-columns:1fr;">
+  <!-- Account summary -->
+  <div class="card rounded-2xl border p-6">
+    <h2 class="font-semibold mb-3">Account Summary</h2>
+
+    <dl class="kv">
+      <dt class="muted" style="font-weight:800;">Email</dt>
+      <dd>{{ current_user.email }}</dd>
+      <dt class="muted" style="font-weight:800;">Username</dt>
+      <dd>{{ current_user.username }}</dd>
+      <dt class="muted" style="font-weight:800;">Role</dt>
+      <dd>{{ role }}</dd>
+    </dl>
+
+    <div class="form-actions mt-3" style="gap:10px;flex-wrap:wrap">
+      {% if is_admin %}
+        <a class="btn btn-primary" href="{{ url_for('admin_dashboard') }}">Open Admin Dashboard</a>
+        <a class="btn btn-outline" href="{{ url_for('admin_audit') }}">Audit & Analytics</a>
+      {% endif %}
+
+      {% if is_seller %}
+        <a class="btn" href="{{ url_for('seller_products') }}">Open User Dashboard</a>
+      {% elif role == "customer" %}
+        <form action="{{ url_for('become_seller') }}" method="post" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">Become a Seller</button>
+        </form>
+      {% endif %}
+
+      <a class="btn btn-outline" href="{{ url_for('home') }}">Back to Home</a>
+      <form action="{{ url_for('logout') }}" method="post" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn" type="submit">Logout</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Security / 2FA -->
+  <div class="card rounded-2xl border p-6">
+    <h2 class="font-semibold mb-3">Security</h2>
+    <p class="muted">Two-factor authentication (TOTP)</p>
+
+    {% if twofa_enabled %}
+      <p class="mb-2"><strong>Status:</strong> Enabled</p>
+
+      <!-- Bold instruction + Base32 key + Copy -->
+      <p class="mb-1" style="font-weight:700;">Scan with Google Authenticator (or similar), or use this key:</p>
+      <div class="keyline">
+        <code id="b32-key">{{ setup_key or '' }}</code>
+        <button id="copy-key" class="btn btn-outline btn-sm" type="button">Copy</button>
+      </div>
+
+      <div class="form-actions" style="margin-top:14px; gap:10px; flex-wrap:wrap">
+        <form action="{{ url_for('disable_2fa') }}" method="post" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline" type="submit">Disable 2FA</button>
+        </form>
+      </div>
+    {% else %}
+      <p class="mb-2"><strong>Status:</strong> Disabled</p>
+      <form action="{{ url_for('enable_2fa') }}" method="post" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary" type="submit">Enable 2FA</button>
+      </form>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

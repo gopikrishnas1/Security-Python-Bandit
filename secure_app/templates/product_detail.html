@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — SecureApp{% endblock %}
+
+{% block content %}
+
+<a href="{{ url_for('all_products') }}" class="text-sm link">← Back to all products</a>
+
+{% set rc = (reviews|length) if reviews else 0 %}
+{% set ns = namespace(total=0) %}
+{% for r in reviews %}
+  {% set ns.total = ns.total + (r.rating or 0) %}
+{% endfor %}
+{% set avg = (ns.total / rc) if rc > 0 else 0 %}
+{% set rounded = ((avg + 0.5) // 1)|int %}
+{% if rounded < 0 %}{% set rounded = 0 %}{% endif %}
+{% if rounded > 5 %}{% set rounded = 5 %}{% endif %}
+
+<section class="mt-4 grid product-hero" style="gap:16px; grid-template-columns: 1.1fr 1fr;">
+  <div class="gallery card" style="padding:0;">
+    {% if product.image %}
+      <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+           alt="{{ product.name }}" style="width:100%;height:auto;display:block;border-radius:12px;">
+    {% else %}
+      <img src="{{ url_for('static', filename='icons/security.png') }}"
+           alt="{{ product.name }}" style="width:100%;height:auto;display:block;border-radius:12px;">
+    {% endif %}
+  </div>
+
+  <div class="info">
+    <h1 class="text-3xl font-extrabold tracking-tight">{{ product.name }}</h1>
+    {% if product.description %}
+      <p class="text-gray-600 mt-1">{{ product.description }}</p>
+    {% endif %}
+
+    <div class="meta-row mt-2" aria-label="Average rating {{ '%.1f' % avg }} out of 5">
+      <span class="stars">
+        {% for _ in range(rounded) %}<span class="star on">★</span>{% endfor %}
+        {% for _ in range(5 - rounded) %}<span class="star off">★</span>{% endfor %}
+      </span>
+      <span class="muted ml-2">{{ '%.1f' % avg }} / 5</span>
+      <span class="muted ml-1">•</span>
+      <a class="link ml-1" href="#reviews">{{ rc }} review{{ '' if rc == 1 else 's' }}</a>
+    </div>
+
+    <div class="mt-3 meta-row">
+      <span class="price-tag text-2xl">£{{ '%.2f' % product.price }}</span>
+      {% if product.stock|int > 10 %}
+        <span class="pill">In stock</span>
+      {% elif product.stock|int > 0 %}
+        <span class="pill">Low stock ({{ product.stock }})</span>
+      {% else %}
+        <span class="pill">Out of stock</span>
+      {% endif %}
+    </div>
+
+    <div class="buy-row mt-3" style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% if product.stock|int > 0 %}
+        {% if current_user.is_authenticated %}
+          <form method="post" action="{{ url_for('cart_add', product_id=product.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary">Add to Basket</button>
+          </form>
+        {% else %}
+          <a class="btn btn-primary" href="{{ url_for('login') }}">Log in to buy</a>
+        {% endif %}
+      {% else %}
+        <button class="btn btn-outline" disabled aria-disabled="true">Out of Stock</button>
+      {% endif %}
+      <a class="btn btn-outline" href="{{ url_for('view_cart') }}">Go to Basket</a>
+    </div>
+  </div>
+</section>
+
+<hr class="my-10">
+
+<section class="grid md:grid-cols-2 gap-8 items-start" id="reviews">
+  <div>
+    <h2 class="font-semibold text-xl mb-3">Write a review</h2>
+
+    {% if can_review %}
+      <form method="post"
+            action="{{ url_for('add_review', product_id=product.id) }}"
+            enctype="multipart/form-data"
+            class="card p-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3">
+          <label for="rating">Rating</label>
+          <select id="rating" name="rating" required>
+            <option value="5" selected>5 — Excellent</option>
+            <option value="4">4 — Good</option>
+            <option value="3">3 — Okay</option>
+            <option value="2">2 — Poor</option>
+            <option value="1">1 — Bad</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="content">Your review</label>
+          <textarea id="content" name="content" rows="6"
+            placeholder="Share your experience. You can use basic formatting (bold, italics, lists)."
+            required></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label for="image">Optional image</label>
+          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.gif">
+          <p class="text-xs text-gray-500 mt-1">Max 2MB. JPG/PNG/GIF only.</p>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Submit review</button>
+        </div>
+      </form>
+    {% else %}
+      <div class="card p-6">
+        {% if not current_user.is_authenticated %}
+          <p class="text-gray-600">Log in after purchasing to leave a review.</p>
+        {% else %}
+          <p class="text-gray-600">You can review this item after you've purchased it.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <h2 class="font-semibold text-xl mb-3">Customer reviews</h2>
+
+    {% if reviews and reviews|length > 0 %}
+      <div class="space-y-2">
+        {% for r in reviews %}
+          <article class="review card" style="padding:16px;">
+            <header style="display:flex;justify-content:space-between;gap:8px;">
+              <div class="author">{{ r.username or 'User' }}</div>
+              <div class="date muted">{{ r.created_at or '' }}</div>
+            </header>
+
+            {% if r.rating %}
+              <div class="text-sm mb-1" aria-label="Rating {{ r.rating }} out of 5">
+                <span class="stars">
+                  {% for _ in range(r.rating or 0) %}<span class="star on">★</span>{% endfor %}
+                  {% for _ in range(5 - (r.rating or 0)) %}<span class="star off">★</span>{% endfor %}
+                </span>
+                <span class="ml-1">{{ r.rating }}/5</span>
+              </div>
+            {% endif %}
+
+            <div class="body">
+              {% if r.content_html %}
+                {{ r.content_html | safe }}
+              {% elif r.content %}
+                <p>{{ r.content }}</p>
+              {% else %}
+                <p class="muted">No text provided.</p>
+              {% endif %}
+            </div>
+
+            {% if r.image %}
+              <div class="mt-3">
+                <img src="{{ url_for('static', filename='uploads/' ~ r.image) }}"
+                     alt="Review image for {{ product.name }}"
+                     style="max-width:100%;border-radius:10px;">
+              </div>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card p-6">
+        <p class="text-gray-600">No reviews yet. BE the first to write one!.</p>
+      </div>
+    {% endif %}
+  </div>  
+</section>
+
+{% endblock %}

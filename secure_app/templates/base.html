@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}Secure Shop{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/security.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+
+{% set path = request.path %}
+{% set is_auth = current_user.is_authenticated %}
+{% set role_raw = current_user.role if is_auth else '' %}
+{% set is_admin = (role_raw == 'admin') %}
+{% set is_seller = (role_raw == 'seller') %}
+{% set role_label = 'Admin' if is_admin else ('Seller' if is_seller else 'Customer') %}
+
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="{{ url_for('home') }}" aria-label="Secure Shop - Home">
+      <span class="brand-name">Secure Shop</span>
+    </a>
+
+    <form class="search" action="{{ url_for('search') }}" method="get" role="search" aria-label="Search products">
+      <input class="input" type="text" name="q" placeholder="Search products..." value="{{ request.args.get('q','') }}">
+      <button class="btn" type="submit">Search</button>
+    </form>
+
+    <nav class="nav-links" aria-label="Primary">
+      <a class="btn {% if path.startswith('/all-products') %}btn-outline{% endif %}"
+         href="{{ url_for('all_products') }}"
+         {% if path.startswith('/all-products') %}aria-current="page"{% endif %}>
+        All Products
+      </a>
+
+      {% if is_auth %}
+        <a class="btn {% if path == url_for('profile') %}btn-outline{% endif %}"
+           href="{{ url_for('profile') }}"
+           {% if path == url_for('profile') %}aria-current="page"{% endif %}>
+          Profile: {{ role_label }}
+        </a>
+      {% else %}
+        <a class="btn {% if path == url_for('login') %}btn-outline{% endif %}"
+           href="{{ url_for('login') }}"
+           {% if path == url_for('login') %}aria-current="page"{% endif %}>
+          Login
+        </a>
+        <a class="btn {% if path == url_for('register') %}btn-outline{% endif %}"
+           href="{{ url_for('register') }}"
+           {% if path == url_for('register') %}aria-current="page"{% endif %}>
+          Register
+        </a>
+      {% endif %}
+
+      <a class="btn cart {% if path.startswith('/cart') %}btn-outline{% endif %}"
+         href="{{ url_for('view_cart') }}" aria-label="Basket"
+         {% if path.startswith('/cart') %}aria-current="page"{% endif %}>
+        <img src="{{ url_for('static', filename='icons/cart.svg') }}" alt="" style="height:20px;vertical-align:middle;margin-right:6px">
+        Basket <span class="badge">{{ cart_count or 0 }}</span>
+      </a>
+
+      {% if is_auth %}
+        <form action="{{ url_for('logout') }}" method="post" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline" type="submit">Logout</button>
+        </form>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main id="content" class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <section class="flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category|lower }}">{{ message }}</div>
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="grid gap-8" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+      <section>
+        <h3>About</h3>
+        <p class="muted">
+          Prototype e-commerce for 6000CMD Security: Argon2 hashing, CSRF, TOTP 2FA, audit logging, validated uploads, RBAC.
+        </p>
+      </section>
+
+      <section>
+        <h3>Shortcuts</h3>
+        <ul class="muted" style="list-style:none;margin:.5rem 0 0;padding:0">
+          <li><a href="{{ url_for('all_products') }}">Browse all products</a></li>
+          {% if is_auth %}
+            <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            <li><a href="{{ url_for('view_cart') }}">Basket</a></li>
+          {% else %}
+            <li><a href="{{ url_for('login') }}">Login</a> · <a href="{{ url_for('register') }}">Register</a></li>
+          {% endif %}
+        </ul>
+      </section>
+
+      <section>
+        <h3>Admin</h3>
+        <ul class="muted" style="list-style:none;margin:.5rem 0 0;padding:0">
+          {% if is_admin %}
+            <li><a href="{{ url_for('admin_dashboard') }}">Admin dashboard</a></li>
+            <li><a href="{{ url_for('admin_products') }}">Manage products</a></li>
+            <li><a href="{{ url_for('admin_users') }}">Manage users</a></li>
+            <li><a href="{{ url_for('admin_audit') }}">Analytics &amp; audit</a></li>
+            <li><a href="{{ url_for('admin_audit_export') }}">Export audit CSV</a></li>
+          {% else %}
+            <li class="muted">Sign in as admin to view admin tools.</li>
+          {% endif %}
+        </ul>
+      </section>
+
+      <section>
+        <h3>Security</h3>
+        <ul class="muted" style="list-style:none;margin:.5rem 0 0;padding:0">
+          <li>CSRF on mutating routes</li>
+          <li>Rate limited login</li>
+          <li>TOTP 2FA available</li>
+          <li>Content Security Policy</li>
+          <li>Server side sanitisation</li>
+        </ul>
+      </section>
+    </div>
+
+    <hr style="margin:18px 0">
+    <p class="muted">© <span id="year"></span> Secure Shop — Gopikrishna Santharuban.</p>
+  </div>
+</footer>
+
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</html>

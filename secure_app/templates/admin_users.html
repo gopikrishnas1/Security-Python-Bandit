@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Admin — Users{% endblock %}
+
+{% block content %}
+
+{# Compute counts locally if view didn't pass them #}
+{% set n_total    = (users|length) %}
+{% set n_admin    = (users|selectattr('role','equalto','admin')|list|length) %}
+{% set n_seller   = (users|selectattr('role','equalto','seller')|list|length) %}
+{% set n_customer = (users|selectattr('role','equalto','customer')|list|length) %}
+
+<section class="products-header">
+  <div>
+    <h1>Manage users</h1>
+    <div class="count">
+      Total: {{ n_total }}
+      • Admins: {{ n_admin }}
+      • Sellers: {{ n_seller }}
+      • Customers: {{ n_customer }}
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a class="btn" href="{{ url_for('admin_dashboard') }}">Back to dashboard</a>
+  </div>
+</section>
+
+<div class="card" style="padding:12px;">
+  <form action="{{ url_for('admin_users') }}" method="get" class="form-actions" role="search" aria-label="Filter users">
+    <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search by username or email…">
+    <select name="role" aria-label="Role filter">
+      {% set r = request.args.get('role','') %}
+      <option value="" {% if r=='' %}selected{% endif %}>All roles</option>
+      <option value="customer" {% if r=='customer' %}selected{% endif %}>Customer</option>
+      <option value="seller"   {% if r=='seller' %}selected{% endif %}>Seller</option>
+      <option value="admin"    {% if r=='admin' %}selected{% endif %}>Admin</option>
+    </select>
+    <button class="btn btn-outline" type="submit">Apply</button>
+    <a class="btn" href="{{ url_for('admin_users') }}">Reset</a>
+  </form>
+</div>
+
+{% if users and users|length > 0 %}
+  <div class="card" style="margin-top:12px; overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:220px;">User</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>2FA</th>
+          <th style="min-width:220px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          {% set is_self = (current_user.is_authenticated and u.id == current_user.id) %}
+          <tr>
+            <!-- User -->
+            <td>
+              <div style="font-weight:800">
+                {{ u.username }}
+                {% if is_self %}
+                  <span class="pill" title="You" style="margin-left:6px;">You</span>
+                {% endif %}
+              </div>
+              <div class="muted" style="font-size:.88rem">#{{ u.id }}</div>
+            </td>
+
+            <!-- Email -->
+            <td>
+              {% if u.email %}
+                <a href="mailto:{{ u.email }}">{{ u.email }}</a>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+
+            <!-- Role -->
+            <td>
+              {% if is_self %}
+                <div>
+                  <span class="pill" style="background:#0a7; color:#fff;">Admin</span>
+                </div>
+                <div class="text-xs muted mt-2">
+                  This is your <strong>admin account</strong>. Role changes are disabled.
+                </div>
+              {% else %}
+                <form method="post"
+                      action="{{ url_for('admin_update_user_role', user_id=u.id) }}"
+                      class="form-actions" style="gap:6px; margin:0"
+                      aria-label="Change role for {{ u.username }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="role" aria-label="Role">
+                    <option value="customer" {% if u.role=='customer' %}selected{% endif %}>Customer</option>
+                    <option value="seller"   {% if u.role=='seller' %}selected{% endif %}>Seller</option>
+                    <option value="admin"    {% if u.role=='admin' %}selected{% endif %}>Admin</option>
+                  </select>
+                  <button class="btn" type="submit">Update</button>
+                </form>
+                <div class="text-xs muted mt-2">
+                  Changing to <strong>Seller</strong> creates an entry in the sellers table.
+                  Changing to <strong>Admin</strong> records the grant in the admins table and the audit log.
+                </div>
+              {% endif %}
+            </td>
+
+            <!-- 2FA -->
+            <td>
+              {% if u.twofa_enabled %}
+                <span class="pill">Enabled</span>
+              {% else %}
+                <span class="pill">—</span>
+              {% endif %}
+            </td>
+
+            <!-- Actions -->
+            <td>
+              {% if is_self %}
+                <div class="text-xs muted">
+                  This is your admin account. You cannot delete your own account.
+                </div>
+              {% else %}
+                <div class="form-actions" style="margin:0; flex-wrap:wrap">
+                  <form method="post"
+                        action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                        class="inline-form"
+                        onsubmit="return confirm('Delete {{ u.username }}? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-primary" type="submit">Delete</button>
+                  </form>
+                </div>
+              {% endif %}
+              <div class="text-xs muted mt-2">
+                All actions are written to the audit log with IP/UA and session ID.
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page is defined and pages is defined and pages > 1 %}
+    <div class="form-actions" style="justify-content:center; margin-top:12px">
+      {% set q = request.args.get('q','') %}
+      {% set role = request.args.get('role','') %}
+      {% if page > 1 %}
+        <a class="btn" href="{{ url_for('admin_users', page=page-1, q=q, role=role) }}">← Prev</a>
+      {% else %}
+        <button class="btn" disabled>← Prev</button>
+      {% endif %}
+
+      <span class="muted">Page {{ page }} of {{ pages }}</span>
+
+      {% if page < pages %}
+        <a class="btn" href="{{ url_for('admin_users', page=page+1, q=q, role=role) }}">Next →</a>
+      {% else %}
+        <button class="btn" disabled>Next →</button>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card" style="padding:16px; margin-top:12px;">
+    <p>No users found for the current filters.</p>
+    <div class="form-actions">
+      <a class="btn" href="{{ url_for('admin_users') }}">Clear filters</a>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

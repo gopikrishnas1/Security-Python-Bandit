@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Seller — Sales History{% endblock %}
+
+{% block content %}
+
+<a href="{{ url_for('seller_products') }}" class="text-sm hover:text-blue-600">← Back to My Products</a>
+
+<section class="products-header" style="margin-top:6px">
+  <div>
+    <h1>Sales History</h1>
+    <div class="count">
+      {% set order_count = (orders|length) if orders else 0 %}
+      {% set total_units = orders|sum(attribute='quantity') if orders else 0 %}
+      {% set total_revenue = orders|sum(attribute='total_price') if orders else 0 %}
+      Orders: {{ order_count }}
+      {% if total_units %} • Units: {{ total_units }}{% endif %}
+      {% if total_revenue %} • Revenue: £{{ '%.2f' % total_revenue }}{% endif %}
+    </div>
+  </div>
+</section>
+
+{% if orders and orders|length > 0 %}
+  <div class="card" style="margin-top:12px; overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:140px;">Date</th>
+          <th>Product</th>
+          <th>Buyer</th>
+          <th>Qty</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+          <tr>
+            <!-- Date -->
+            <td>
+              {{ (o.created_at if o.created_at is defined else o['created_at']) | default('') }}
+            </td>
+
+            <!-- Product (link if product_id available) -->
+            <td>
+              {% set pid = (o.product_id if o.product_id is defined else o['product_id'] if 'product_id' in o else None) %}
+              {% set pname = (o.product_name if o.product_name is defined else o['product_name']) | default('Product') %}
+              {% if pid %}
+                <a href="{{ url_for('product_detail', product_id=pid) }}">{{ pname }}</a>
+              {% else %}
+                {{ pname }}
+              {% endif %}
+            </td>
+
+            <!-- Buyer -->
+            <td>
+              {{ (o.buyer_username if o.buyer_username is defined else o['buyer_username']) | default('Buyer') }}
+            </td>
+
+            <!-- Quantity -->
+            <td>
+              {{ (o.quantity if o.quantity is defined else o['quantity']) | default(0) }}
+            </td>
+
+            <!-- Total -->
+            <td>
+              {% set total_price = (o.total_price if o.total_price is defined else o['total_price']) | default(0.0) %}
+              £{{ '%.2f' % total_price }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Optional pagination support if your view provides page/pages #}
+  {% if page is defined and pages is defined and pages > 1 %}
+    <div class="form-actions" style="justify-content:center; margin-top:12px">
+      {% if page > 1 %}
+        <a class="btn" href="{{ url_for('seller_orders', page=page-1) }}">← Prev</a>
+      {% else %}
+        <button class="btn" disabled>← Prev</button>
+      {% endif %}
+
+      <span class="muted">Page {{ page }} of {{ pages }}</span>
+
+      {% if page < pages %}
+        <a class="btn" href="{{ url_for('seller_orders', page=page+1) }}">Next →</a>
+      {% else %}
+        <button class="btn" disabled>Next →</button>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card" style="padding:16px; margin-top:12px;">
+    <p class="text-gray-600">No sales yet.</p>
+    <div class="form-actions">
+      <a class="btn btn-primary" href="{{ url_for('seller_add_product') }}">List a product</a>
+      <a class="btn btn-outline" href="{{ url_for('seller_products') }}">Go to My Products</a>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

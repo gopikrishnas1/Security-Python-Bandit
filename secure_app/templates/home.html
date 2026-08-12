@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Home • Secure Shop{% endblock %}
+
+{% block content %}
+
+<!-- Hero / Intro -->
+<section class="hero">
+  <div>
+    <h1>Welcome to Secure Shop</h1>
+    <p class="muted">
+      Prototype e-commerce with secure by default features:
+      Argon2 hashing, CSRF, 2FA, audit logging, uploads validation.
+    </p>
+    <div class="form-actions">
+      <a class="btn btn-primary" href="{{ url_for('all_products') }}">
+        Browse All Products →
+      </a>
+    </div>
+  </div>
+
+  <figure class="hero-img-shadow" aria-hidden="true">
+    <img
+      src="{{ url_for('static', filename='icons/security.png') }}"
+      alt="Security illustration showing protected e-commerce"
+      loading="eager"
+      decoding="async">
+  </figure>
+</section>
+
+<!-- Latest products -->
+<section class="products" style="margin-top:12px">
+  <div class="products-header">
+    <div>
+      <h2>Latest Products</h2>
+      <div class="count">{{ products|length }} item{{ '' if products|length == 1 else 's' }}</div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('all_products') }}">View all →</a>
+    </div>
+  </div>
+
+  {% if products and products|length %}
+    <div class="product-grid">
+      {% for p in products %}
+        <article class="card product-card">
+          <a href="{{ url_for('product_detail', product_id=p['id']) }}" class="product-media" aria-label="{{ p['name'] }}">
+            {% if p['image'] %}
+              <img src="{{ url_for('static', filename='uploads/' ~ p['image']) }}" alt="{{ p['name'] }}">
+            {% else %}
+              <img src="{{ url_for('static', filename='icons/security.png') }}" alt="{{ p['name'] }}">
+            {% endif %}
+          </a>
+
+          <div class="product-body">
+            <h3 class="product-title">
+              <a class="link" href="{{ url_for('product_detail', product_id=p['id']) }}">{{ p['name'] }}</a>
+            </h3>
+
+            <div class="product-meta">
+              <span class="price">£{{ '%.2f'|format(p['price']) }}</span>
+              <span class="stock {{ 'ok' if p['stock']|int > 0 else 'muted' }}">
+                {% if p['stock']|int > 0 %}In stock ({{ p['stock'] }}){% else %}Out of stock{% endif %}
+              </span>
+            </div>
+
+            <div class="rating muted">
+              {% set avg = (p['avg_rating'] or 0) %}
+              {% set count = (p['review_count'] or 0) %}
+              ⭐ {{ '%.1f'|format(avg) }} · {{ count }} review{{ '' if count == 1 else 's' }}
+            </div>
+          </div>
+
+          <div class="product-actions">
+            <a class="btn btn-outline" href="{{ url_for('product_detail', product_id=p['id']) }}">View</a>
+
+            {% if p['stock']|int > 0 %}
+              {% if current_user.is_authenticated %}
+                <form action="{{ url_for('cart_add', product_id=p['id']) }}" method="post" class="inline-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-primary" type="submit" aria-label="Add {{ p['name'] }} to basket">Add to Basket</button>
+                </form>
+              {% else %}
+                <a class="btn btn-primary" href="{{ url_for('login', next=url_for('product_detail', product_id=p['id'])) }}">Login to buy</a>
+              {% endif %}
+            {% else %}
+              <button class="btn" disabled>Out of stock</button>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <section class="card" style="margin-top:12px; text-align:center">
+      <p class="muted">No products yet. {% if current_user.is_authenticated and (current_user.role == 'seller' or current_user.role == 'admin') %}Be the first to <a class="link" href="{{ url_for('seller_add_product') }}">add one</a>.{% endif %}</p>
+    </section>
+  {% endif %}
+</section>
+
+{% endblock %}

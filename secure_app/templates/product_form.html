@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Product' if product else 'Add Product' }} — SecureApp{% endblock %}
+
+{% block content %}
+
+{% set _back = back_url if back_url is defined and back_url
+            else (url_for('seller_products') if current_user.is_authenticated and current_user.role == 'seller'
+                  else url_for('admin_products')) %}
+
+<h1 class="text-2xl font-bold mb-4">{{ 'Edit Product' if product else 'Add Product' }}</h1>
+
+<form method="post"
+      enctype="multipart/form-data"
+      class="card"
+      style="max-width:780px;padding:16px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <!-- Name -->
+  <div class="mb-3">
+    <label for="name">Name</label>
+    <input id="name" name="name" type="text" minlength="2" maxlength="120" required
+           placeholder="e.g. Wireless Headphones"
+           value="{{ product.name if product else '' }}">
+  </div>
+
+  <!-- Description -->
+  <div class="mb-3">
+    <label for="description">Description</label>
+    <textarea id="description" name="description" rows="5" minlength="10" maxlength="2000" required
+              placeholder="Short, clear description of the product including key features.">{{ product.description if product else '' }}</textarea>
+  </div>
+
+  <!-- Price & Stock -->
+  <div class="grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+    <div>
+      <label for="price">Price (GBP)</label>
+      <input id="price" name="price" type="number" inputmode="decimal" min="0" step="0.01" required
+             value="{{ ('%.2f' % product.price) if product else '' }}">
+    </div>
+    <div>
+      <label for="stock">Stock</label>
+      <input id="stock" name="stock" type="number" inputmode="numeric" min="0" step="1" required
+             value="{{ product.stock if product else 0 }}">
+    </div>
+  </div>
+
+  <!-- Current image (edit mode) -->
+  {% if product and product.image %}
+    <div class="mt-3">
+      <label>Current Image</label>
+      <div class="flex items-start gap-8">
+        <div class="w-full" style="max-width:260px;">
+          <img src="{{ url_for('static', filename='uploads/' ~ product.image) }}"
+               alt="Current product image"
+               class="rounded-xl w-full h-56 object-cover">
+        </div>
+        <p class="muted" style="max-width:420px;">
+          Uploading a new file will replace the current image. Leave the field below empty to keep this image.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Upload new image -->
+  <div class="mt-3">
+    <label for="image">Image (JPG/PNG/GIF, max 2MB)</label>
+    <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.gif">
+    <p class="text-xs text-gray-500 mt-1">Images are validated server-side and sanitized. Animated GIFs are allowed.</p>
+
+    <!-- SIMPLE PREVIEW -->
+    <img id="imgPreview" alt="Selected image preview"
+         style="display:none;margin-top:10px;border-radius:12px;max-width:100%;height:224px;object-fit:cover;">
+  </div>
+
+  <!-- Actions -->
+  <div class="form-actions" style="margin-top:14px">
+    <button class="btn btn-primary" type="submit">
+      {{ 'Save Changes' if product else 'Create Product' }}
+    </button>
+    <a class="btn btn-outline" href="{{ _back }}">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}
